@@ -1,2 +1,2 @@
 # DCOM configuration module for Puppet
-manage dcom configuration
+Puppet Module to manage dcom configuration
