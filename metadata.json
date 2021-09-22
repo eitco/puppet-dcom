@@ -1,6 +1,6 @@
 {
   "name": "eitco-dcom",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "author": "Roman Helwig",
   "summary": "Module to manage the DCOM settings",
   "license": "Apache-2.0",
