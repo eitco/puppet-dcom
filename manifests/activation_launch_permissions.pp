@@ -32,7 +32,6 @@
 #
 define dcom::activation_launch_permissions (
   Hash $app_activation_launch_permissions = undef,
-# Optional[String] $previous_app,
 ) {
 
   if ! defined(Class['dcom']) {
@@ -53,6 +52,15 @@ define dcom::activation_launch_permissions (
         fail('The parameter "$app_activation_launch_permissions[\'acl\']" must be either "permit" or "deny"')
       }
 
+      exec { "Enabling DCOM configuration to set up activation & access permissions for application '${key}'":
+        path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
+        command  => "New-PSDrive -PSProvider Registry -Name HKCR -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue;
+                     New-Item -Path \"HKCR:\\AppID\\${value['appID']}\" -Value \"${key}\";",
+        unless   => "New-PSDrive -PSProvider Registry -Name HKCR -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue;
+                     if (Test-Path \"HKCR:\\AppID\\${value['appID']}\") {exit 0} else {exit 1}",
+        provider => 'powershell',
+      }
+
       # lint:ignore:140chars
       if $value['users'] =~ Stdlib::Compat::Array {
 
@@ -61,139 +69,154 @@ define dcom::activation_launch_permissions (
             'present','true': {
               case $value['level'] {
                 'l': {
-                  exec { "Reset remote launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset remote launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set local launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set local launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                 if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {(\$_.Contains(\"Local\") -and \$_.Contains(\"launch\")) -or (\$_.Contains(\"Local\") -and \$_.Contains(\"activation\")) -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'r': {
-                  exec { "Reset local launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset local launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set remote launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set remote launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {(\$_.Contains(\"Remote\") -and \$_.Contains(\"launch\")) -or (\$_.Contains(\"Remote\") -and \$_.Contains(\"activation\")) -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 /(l,r|r,l)/: {
-                  exec { "Reset ${acl_unset} remote or local launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset ${acl_unset} remote or local launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {(\$_.Contains(\"Remote\") -or \$_.Contains(\"Local\")) -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_unset}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set remote launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set remote launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"Local\") -and (\$_.Contains(\"launch\") -or \$_.Contains(\"activation\")) -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'la': {
-                  exec { "Reset all launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset all launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -or (\$_.Contains(\"Local\") -and \$_.Contains(\"launch\")) -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set local activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set local activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -and \$_.Contains(\"activation\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'll': {
-                  exec { "Reset all launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset all launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -or (\$_.Contains(\"Local\") -and \$_.Contains(\"activation\")) -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set local launch permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set local launch permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -and \$_.Contains(\"launch\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'ra': {
-                  exec { "Reset all launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset all launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -or (\$_.Contains(\"Remote\") -and \$_.Contains(\"launch\")) -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set remote activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set remote activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"activation\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'rl': {
-                  exec { "Reset all launch & activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset all launch & activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -or (\$_.Contains(\"Remote\") -and \$_.Contains(\"activation\")) -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set remote activation permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set remote activation permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"launch\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 default: {
-                  fail("The given level \"${value['level']}\" is not supported. Make sure it is one of the following formats: ([l,r],[l],[r],[la],[ll],[ra],[rl])")
+                  fail("The given level '${value['level']}' is not supported. Make sure it is one of the following formats: ([l,r],[l],[r],[la],[ll],[ra],[rl])")
                 }
               }
             }
             'absent','false': {
-              exec { "Remove launch or activation permissions for \'${user}\' in application \'${key}\'":
+              exec { "Remove launch or activation permissions for '${user}' in application '${key}'":
                 path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                command  => "&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" remove \"${user}\"",
-                unless   => "if (!(&${facts['temp_path']}\\DComPermEx.exe -al \"${value['appID']}\" list | Out-String).Contains(\"${user}\")) {exit 0} else {exit 1}",
+                command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" remove \"${user}\";
+                            if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                unless   => "if (!(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -al \"${value['appID']}\" list | Out-String).Contains(\"${user}\")) {exit 0} else {exit 1}",
                 provider => 'powershell',
               }
             }
             default: {
-              fail('The parameter $app_activation_launch_permissions[\'ensure\'] only accepts the following values: \'present\', \'absent\', \'true\' or \'false\'!')
+              fail('The parameter "$app_activation_launch_permissions[\'ensure\']" only accepts the following values: "present", "absent", "true" or "false"!')
             }
           }
         }

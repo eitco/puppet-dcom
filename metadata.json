@@ -1,6 +1,6 @@
 {
   "name": "eitco-dcom",
-  "version": "0.2.2",
+  "version": "0.3.2",
   "author": "Roman Helwig",
   "summary": "Module to manage the DCOM settings",
   "license": "Apache-2.0",
@@ -36,7 +36,7 @@
   "requirements": [
     {
       "name": "puppet",
-      "version_requirement": ">= 4.10.0 < 7.0.0"
+      "version_requirement": ">= 4.10.0 < 8.0.0"
     }
   ],
   "pdk-version": "1.18.1",

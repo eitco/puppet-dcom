@@ -1,15 +1,15 @@
 # == Class: dcom::prerequisites
 class dcom::prerequisites () {
 
-  file{'Ensure Temp Path is present':
+  file{'Creating Folder for DComPermEx.exe':
     ensure => 'directory',
-    path   => $facts['temp_path']
+    path   => 'C:/Program Files/DComPermEx'
   }
 
-  file{'Ensure DComPermEx.exe is present':
+  file{'Copying DComPermEx.exe':
     ensure => 'file',
     mode   => '0777',
     source => 'puppet:///modules/dcom/DComPermEx.exe',
-    path   => "${facts['temp_path']}/DComPermEx.exe",
+    path   => 'C:/Program Files/DComPermEx/DComPermEx.exe',
   }
 }

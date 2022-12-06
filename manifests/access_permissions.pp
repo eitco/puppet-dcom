@@ -47,6 +47,15 @@ define dcom::access_permissions (
         fail('The parameter "$app_access_permissions[\'acl\']" must be either "permit" or "deny"')
       }
 
+      exec { "Enabling DCOM configuration to set up access permissions for application '${key}'":
+        path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
+        command  => "New-PSDrive -PSProvider Registry -Name HKCR -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue;
+                     New-Item -Path \"HKCR:\\AppID\\${value['appID']}\" -Value \"${key}\";",
+        unless   => "New-PSDrive -PSProvider Registry -Name HKCR -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue;
+                     if (Test-Path \"HKCR:\\AppID\\${value['appID']}\") {exit 0} else {exit 1}",
+        provider => 'powershell',
+      }
+
       # lint:ignore:140chars
       if $value['users'] =~ Stdlib::Compat::Array {
 
@@ -56,35 +65,39 @@ define dcom::access_permissions (
             'present','true': {
               case $value['level'] {
                 'r': {
-                  exec { "Reset local permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset local permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set access permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set access permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 'l': {
-                  exec { "Reset remote permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Reset remote permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"${user}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set access permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set access permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Local\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
@@ -94,37 +107,40 @@ define dcom::access_permissions (
                 # For some reason - when using level:"l,r" - DCOM keeps the "permitted" and "denied" entries in it´s database and that kills the "unless" check
                 # not an issue when setting only level:r or level:l though
                 /(l,r|r,l)/: {
-                  exec { "Remove ${acl_unset} remote or local permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Remove ${acl_unset} remote or local permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" remove \"${user}\"",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" remove \"${user}\";
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if (!((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"Local\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_unset}\")}) -eq \$true)) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
 
-                  exec { "Set access permissions for \'${user}\' in application \'${key}\'":
+                  exec { "Set access permissions for '${user}' in application '${key}'":
                     path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                    command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']}",
-                    unless   => "\$list=(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
+                    command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" set \"${user}\" ${value['acl']} level:${value['level']};
+                                if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                    unless   => "\$list=(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Split(\"`r`n\",[StringSplitOptions]::RemoveEmptyEntries);
                                 if ((Write-Output \$list | ForEach-Object {\$_.Contains(\"Remote\") -and \$_.Contains(\"Local\") -and \$_.Contains(\"${user}\") -and \$_.Contains(\"${acl_set}\")}) -eq \$true) {exit 0} else {exit 1}",
                     provider => 'powershell',
                   }
                 }
                 default: {
-                  fail("The given level \"${value['level']}\" is not supported. Make sure it is one of the following formats: ([l,r],[l],[r])")
+                  fail("The given level '${value['level']}' is not supported. Make sure it is one of the following formats: ([l,r],[l],[r])")
                 }
               }
             }
             'absent','false': {
-              exec { "Remove access permissions for \'${user}\' in application \'${key}\'":
+              exec { "Remove access permissions for '${user}' in application '${key}'":
                 path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
-                command  => "&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" remove \"${user}\"",
-                unless   => "if (!(&${facts['temp_path']}\\DComPermEx.exe -aa \"${value['appID']}\" list | Out-String).Contains(\"${user}\")) {exit 0} else {exit 1}",
+                command  => "\$result = &\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" remove \"${user}\";
+                            if ((\$result -like \"*Successfully*\").Count -gt 0) {exit 0} else {throw \$result}",
+                unless   => "if (!(&\"C:\\Program Files\\DComPermEx\\DComPermEx.exe\" -aa \"${value['appID']}\" list | Out-String).Contains(\"${user}\")) {exit 0} else {exit 1}",
                 provider => 'powershell',
               }
             }
             default: {
-              fail('The parameter $app_access_permissions[\'ensure\'] only accepts the following values: \'present\', \'absent\', \'true\' or \'false\'!')
+              fail('The parameter "$app_access_permissions[\'ensure\']" only accepts the following values: "present", "absent", "true" or "false"!')
             }
           }
         }
