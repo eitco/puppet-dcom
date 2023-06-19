@@ -25,16 +25,14 @@
 define dcom::identity (
   Hash $app_identities = undef,
 ) {
-
   if ! defined(Class['dcom']) {
     fail('You must include the dcom base class before using any dcom defined resources')
   }
 
   # lint:ignore:140chars
-  if $app_identities =~ Stdlib::Compat::Hash {
+  if $app_identities =~ Hash {
     #notice("app_identities is a Hash")
     $app_identities.each |String $key, Hash $value| {
-
       exec { "Enabling DCOM configuration to set up identities for application '${key}'":
         path     => 'C:\Windows\System32\WindowsPowerShell\v1.0',
         command  => "New-PSDrive -PSProvider Registry -Name HKCR -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue;

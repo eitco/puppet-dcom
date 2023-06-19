@@ -28,15 +28,12 @@
 define dcom::access_permissions (
   Hash $app_access_permissions = undef,
 ) {
-
   if ! defined(Class['dcom']) {
     fail('You must include the dcom base class before using any dcom defined resources')
   }
 
-  if $app_access_permissions =~ Stdlib::Compat::Hash {
-
+  if $app_access_permissions =~ Hash {
     $app_access_permissions.each |String $key, Hash $value| {
-
       if $value['acl'] == 'permit' {
         $acl_set = 'permitted'
         $acl_unset = 'denied'
@@ -57,10 +54,8 @@ define dcom::access_permissions (
       }
 
       # lint:ignore:140chars
-      if $value['users'] =~ Stdlib::Compat::Array {
-
+      if $value['users'] =~ Array {
         $value['users'].each |Integer $index, String $user| {
-
           case $value['ensure'] {
             'present','true': {
               case $value['level'] {

@@ -33,15 +33,13 @@
 define dcom::activation_launch_permissions (
   Hash $app_activation_launch_permissions = undef,
 ) {
-
   if ! defined(Class['dcom']) {
     fail('You must include the dcom base class before using any dcom defined resources')
   }
 
-  if $app_activation_launch_permissions =~ Stdlib::Compat::Hash {
+  if $app_activation_launch_permissions =~ Hash {
     #notice("app_activation_launch_permissions is a Hash")
     $app_activation_launch_permissions.each |String $key, Hash $value| {
-
       if $value['acl'] == 'permit' {
         $acl_set = 'permitted'
         $acl_unset = 'denied'
@@ -62,8 +60,7 @@ define dcom::activation_launch_permissions (
       }
 
       # lint:ignore:140chars
-      if $value['users'] =~ Stdlib::Compat::Array {
-
+      if $value['users'] =~ Array {
         $value['users'].each |Integer $index, String $user| {
           case $value['ensure'] {
             'present','true': {

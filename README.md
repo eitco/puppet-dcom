@@ -276,7 +276,6 @@ dcom::activation_launch_permissions
     * workaround #2: remove the user / group from DCOM-config by hand
 * This module is limited by the features that the DComPerm-tool offers
 * DComPerm requires at least Vista / Server 2008
-* This module has been **only tested on Puppet 5 so far**. Although I do not expect any issues with Puppet 7 and up there is no warranty it will work as expected. Newer versions will be tested in the future though.
 
 ## Final thoughts
 

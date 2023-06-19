@@ -7,7 +7,6 @@
 # * Roman Helwig <mailto:rhelwig@eitco.de>
 #
 class dcom () {
-
   if $facts['kernel'] != 'windows' {
     fail('This module runs only on Windows OS!')
   }
